@@ -244,7 +244,7 @@ dim(county)
 County level analysis_plot
 Now make a plot that shows the 2004 county-wide medians in one “column”  and the 2019 county-wide medians in another one. We then draw a line connecting the medians for each year in the same county to highlight the trend.
 
-```{r fig.height=7, fig.width= 11}
+```{r fig.height=6, fig.width= 10}
 qplot(Year, pm25, data = mutate(county, Year = as.numeric(as.character(year))),
        color = factor(COUNTY), 
        geom = c("point", "line"), main = "Change in median concentration PM2.5 from 2004 to 2019 by County")
@@ -270,13 +270,13 @@ dim(site)
 Site-wide analysis_plot
 Now make a plot that shows the 2004 site-wide medians in one “column”  and the 2019 site-wide medians in another one. We then draw a line connecting the medians for each year in the same site to highlight the trend.
 
-```{r fig.height=7, fig.width= 11}
+```{r fig.height=5, fig.width= 7}
 qplot(Year, pm25, data = mutate(site, Year = as.numeric(as.character(year))),
        color = factor(`Site ID`), 
        geom = c("point", "line"), main = "Change in median concentration PM2.5 from 2004 to 2019 by County")
 ```
 
-Based on the plot above, we could observe that all the sites in LA have decreased the median concentration of PM2.5 from 2004 to 2019.
+Based on the plot above, we could observe that all the sites with two-year data in LA have decreased the median concentration of PM2.5 from 2004 to 2019.
 
 
 
