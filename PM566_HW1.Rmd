@@ -258,7 +258,8 @@ Based on the plot above, we could observe that many counties have decreased the 
 calculate median in site level
 
 ```{r site-wide median}
-site <- group_by(PM, year, `Site ID`) %>% summarize(pm25 = median(pm25, na.rm= TRUE))
+site <- PM[which(PM$COUNTY_CODE==37), ]
+site <- group_by(site, year, `Site ID`) %>% summarize(pm25 = median(pm25, na.rm= TRUE))
 raw_site <- which(site$`Site ID` %in% unique(pm04$`Site ID`))
 site <- site[raw_site, ]
 
@@ -277,7 +278,9 @@ qplot(Year, pm25, data = mutate(site, Year = as.numeric(as.character(year))),
 
 Based on the plot above, we could observe that many sites have decreased the median concentration of PM2.5 from 2004 to 2019, although there are still a few sites actually increased their levels.
 
-
+```{r}
+PM[`COUNTY`== "Los Angeles"]
+```
 
 
 
