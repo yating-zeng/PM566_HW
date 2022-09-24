@@ -1,0 +1,294 @@
+---
+title: "PM566_HW1"
+author: "Yating Zeng"
+date: "`r Sys.Date()`"
+output: github_document
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Description
+
+Air pollution data from the U.S Environmental Protection Agency (EPA) were used in this analysis.
+The primary question answered bellow is whether daily concentrations of PM2.5 (particulate matter air pollution with aerodynamic diameter less than 2.5 μm) have decreased in California over the last 15 years (from 2004 to 2019).
+
+# Step 1. Exploratory Data Analysis
+
+```{r}
+library(tidyverse)
+library(lubridate)
+```
+## Read in the data
+
+```{r import the datasets}
+PM2004 <- data.table::fread("ad_viz_plotval_data_2004.csv")
+PM2019 <- data.table::fread("ad_viz_plotval_data_2019.csv")
+```
+
+## Check the dimensions and headers and footers of the data
+```{r cheeck the dimensions, headers, footers, and missing value}
+dim(PM2004)
+dim(PM2019)
+head(PM2004)
+head(PM2019)
+tail(PM2004)
+tail(PM2019)
+```
+
+## Check the variable types in the data
+```{r}
+str(PM2004)
+str(PM2019)
+summary(PM2004)
+summary(PM2019)
+```
+
+## Take a closer look at some/all of the variables
+
+checking the missing value of the Whole data and variables of interest.
+```{r}
+PM04 <- PM2004$`Daily Mean PM2.5 Concentration`
+PM19 <- PM2019$`Daily Mean PM2.5 Concentration`
+mean(is.na(PM2004))
+mean(is.na(PM2019))
+mean(is.na(PM04))
+mean(is.na(PM19))
+sum(is.na(PM2004))
+sum(is.na(PM2019))
+which(is.na(PM04))
+which(is.na(PM19))
+```
+Because the proportions of missing values in two datasets are really low (0.003257422 for 2004 year; 0.003932764 for 2019 year), and without any missing value towards the values of PM2.5 which are of our interest. Then we choose to ignore missing values for now.
+
+
+## check the outlier of the variable of interest.
+
+```{r}
+summary(PM04)
+summary(PM19)
+```
+There are some values less than 0, which are unreasonable as a concentration value. Take a closer look over these values.
+
+```{r check the objects with PM2.5<0}
+#the objects with PM2.5<0
+P04 <- PM2004[which(PM2004$`Daily Mean PM2.5 Concentration` < 0), ]
+P19 <- PM2019[which(PM2019$`Daily Mean PM2.5 Concentration` < 0), ]
+```
+```{r find the proportion of the under 0 values}
+#the proportion of the under 0 values 
+Prop04 <- nrow(P04)/nrow(PM2004)
+Prop04
+Prop19 <- nrow(P19)/nrow(PM2019)
+Prop19
+```
+We could find that there is 1 objects in 2004 and 282 objects in 2019 whose PM2.5 mean concentration value were less than 0, with proportions equal to 5.199397e-05 and 0.00530514  respectively. Thus, it is reasonable to delete these abnormal values for further analysis.
+
+```{r delete the abnormal values}
+PM04 <- PM2004[which(PM2004$`Daily Mean PM2.5 Concentration` >= 0), ]
+PM19 <- PM2019[which(PM2019$`Daily Mean PM2.5 Concentration` >= 0), ]
+summary(PM04)
+summary(PM19)
+```
+
+## Summary 1.
+In these two raw datasets, both of them two datasets have 20 variables, including Daily Mean PM2.5 Concentration, Date, Site ID, etc, with 19233 objects in 2004 and 53156 objects in 2019. The raw data is sorted by the date. After checking the missing value of the whole datasets, we could found that the proportions of missing values in two datasets are really low (0.003257422 for 2004 year and 0.003932764 for 2019 year), without any missing value towards the mean concentration of PM2.5 which is of our interest. Then we choose to ignore missing values for now. But considering over that the mean concentration of PM2.5 cannot be under 0, only the positive values were kept for further analysis. Finally, the dataset of 2004 contains 19232 objects of 20 variables, and the dataset of 2019 contains 52874 objects of 20 variables.
+
+
+
+# Step 2. Data combnation, variable creation and viriable rename
+
+## Combine the two data
+```{r Combine the two data}
+PM <- rbind(PM04, PM19)
+```
+
+## Create a variable for year
+```{r Create a variable for year}
+#PM$year <- mdy(PM$Date)
+PM$year <- year(mdy(PM$Date))
+```
+
+## Change the names of the key variables
+```{r Change the names of the key variables}
+colnames(PM)[5] <- "pm25"
+colnames(PM)[19] <- "lat"
+colnames(PM)[20] <- "lon"
+head(PM)
+```
+
+
+# Step 3.Create a basic map
+```{r remove duplicative information about the distribution of the sites of records}
+library(leaflet)
+pm2004 <- PM[which(year==2004)]  # observation in 2004.
+pm2019 <- PM[which(year==2019)]  # observation in 2019.
+pm2004 <- pm2004[!duplicated(pm2004[,c('Site ID','lat','lon')]),]
+pm2019 <- pm2019[!duplicated(pm2019[,c('Site ID','lat','lon')]),]
+```
+During the process of generating a map bellow, we could find there are so many circles overlap with each other, making the distribution of the states of record in both two years become unclear. Thus, we'd better record the circle only once for each state in these two year respectively.
+
+```{r generate a map of distribution}
+leaflet() %>% 
+  addProviderTiles('CartoDB.Positron') %>% 
+  addCircles(
+    data = pm2004,
+    lat = ~lat, lng = ~lon, opacity = 1, stroke = F, fillOpacity = 0.7, 
+    radius = 2000, color = "green"
+    ) %>%
+  addCircles(
+    data = pm2019,
+    lat = ~lat, lng = ~lon, opacity=1, stroke = F, fillOpacity = 0.5, 
+    radius = 2000, color = "red"
+    )
+```
+## Summary 3.
+There are 106 and 160 monitoring sites in 2004 and 2019 respectively, with sites in 2004 marked by green, and sites in 2019 marked by red. These monitoring sites were relatively evenly spread across California, but slightly concentrated in big cities, which makes sense, because most of the residents were there, making the monitoring of more values. Besides, most of the sites in 2004 were the same with the ones in 2019, meaning the monitoring points in 2019 might expand on the basis of 2004.
+
+
+# Step 4. Check for missing or implausible values of PM2.5 in the combined dataset and explore the proportions of each.
+
+## check the missing values and the implausible values of PM2.5
+```{r check the missing values and the implausible values of PM2.5}
+#check the number of missing values of PM2.5
+sum(is.na(PM$pm25))
+#checking the proportion of missing values
+(colMeans(is.na(PM)))*100
+```
+There is no missing value for the mean concentration of PM2.5. And the proportion of the missing value is 0. Besides, the proportions of missing values in every variable of the combined dataset are acceptable, none of which greater than 10%.
+
+## check the values of PM2.5
+```{r check the values of PM2.5}
+#checking the values of PM2.5
+summary(PM$pm25)
+#check the values of PM2.5}
+ggplot(PM, aes(lat, pm25)) +
+  geom_point(aes(color=PM$year))
+```
+We could also find that the maximum one is 251, which is far from the third quantile of the data and 12.5 μg/m3, which is considered healthy with little to no risk from exposure.And Based on the distribution of mean PM2.5, there is not only the maximum one seems to be implausible. Thus it's better to take a closer look at the distribution of the values of PM2.5 and especially the maximum to analyze whether these values were gained by error or not. 
+
+```{r check the values above 90 of PM2.5 based on their inormation}
+raw <- which(PM[ , pm25 > 90.00])
+PM[raw, c(1, 3, 5, 8, 18:21)]
+```
+We could also find that most of the high level PM2.5 tested were from the same place, which was located in Yosemite Village Visitor Center with (37.74871, -119.5871). And in this site, we also noticed that the high level of PM2.5 appeared for several times in both 2004 and 2019, which means it would be reasonable to believe these big numbers were not due to monitoring errors but the true situation. Thus, there is no implausible values in this data, but some high level values of PM2.5 with research value.
+
+## Find some information about temporal patterns
+```{r check the values above 50 of PM2.5 based on their inormation}
+raw <- which(PM[ , pm25 > 50])
+PM0 <- PM[raw, c(1, 3, 5, 8, 18:21)]
+PM0 <- PM0[order(PM0$"Site Name", PM0$"Date"), ]
+PM0
+```
+
+## Summary 3.
+Based on the information we gained above, there is no missing value or implausible value for the mean concentration of PM2.5. And the proportion of both the missing value and the implausible value are 0. Besides, the proportions of missing values in every variable of the combined dataset are all less than 10%, which is totally acceptable.
+Besides, after taking a look about the information of the observations whose mean concentration of PM2.5 are greater than 50, it seems most of them were recorded in 2004. In addition, some of the site seems to have such high level of PM2.5 only in 2004, showing a decrease in 2019 towards the high level values of PM2.5.
+
+
+# Step 5. Explore the question that whether daily concentrations of PM2.5 have decreased in California over the last 15 years, at three different spatial levels:1) State, 2) County, 3) Sites in LA.
+
+Create exploratory plots to see what the data looks like
+
+```{r}
+hist(PM[year == 2004]$pm25, 100)
+hist(PM[year == 2019]$pm25, 100)
+```
+
+The distribution of mean concentration of PM2.5 in 2004 and 2019 both seem to be right skewed, making it would be more reasonable to use median rather than mean for further analysis.
+
+
+## State_wide analysis
+
+Only with the data from California State, so we take a look about this state level distribution of the data by boxplots and histograms first.
+
+```{r}
+library(ggplot2)
+#histogram plot
+ggplot(PM, aes(x = pm25)) +
+  geom_histogram(aes(color = year, fill = year), 
+                position = "identity", bins = 30, alpha = 0.4)
+#boxplot
+PM %>% ggplot()+
+     geom_boxplot(mapping=aes(x=year, y= pm25, group = year))
+```
+Calculate the median of PM2.5 for each year in State level
+```{r calculate the median values for each year}
+state <- group_by(PM, year, STATE_CODE) %>% summarize(pm25 = median(pm25, na.rm = TRUE))
+state
+```
+
+From the histogram plot, we can see little difference between these two datasets, because of the overlap area is too much. But in boxplots, we could find a slightly decrease of the mean concentration of PM2.5 in 2019 compared to 2004, which is consistent with the fact that the median of 2004 data is 10.1 and the median of 2019 data is 6.5.
+In short, in state level, the daily mean concentration of PM2.5 in 2019 decreased compared to 2004.
+
+
+## County level analysis
+
+Only the county with both two year data should be kept for further study.
+```{r}
+pm04 <- PM[year == 2004]
+pm19 <- PM[year == 2019]
+```
+
+calculate median in county level, 
+```{r county level median}
+county <- group_by(PM, year, COUNTY) %>% summarize(pm25 = median(pm25, na.rm= TRUE))
+raw_county <- which(county$COUNTY %in% unique(pm04$COUNTY))
+county <- county[raw_county, ]
+
+county
+dim(county)
+```
+
+County level analysis_plot
+Now make a plot that shows the 2004 county-wide medians in one “column”  and the 2019 county-wide medians in another one. We then draw a line connecting the medians for each year in the same county to highlight the trend.
+
+```{r fig.height=7, fig.width= 11}
+qplot(Year, pm25, data = mutate(county, Year = as.numeric(as.character(year))),
+       color = factor(COUNTY), 
+       geom = c("point", "line"), main = "Change in median concentration PM2.5 from 2004 to 2019 by County")
+```
+
+Based on the plot above, we could observe that many counties have decreased the median concentration of PM2.5 from 2004 to 2019, although there are still a few counties actually increased their levels.
+
+
+## Site-wide analysis (sites in Los Angeles)
+
+calculate median in site level
+
+```{r site-wide median}
+site <- group_by(PM, year, `Site ID`) %>% summarize(pm25 = median(pm25, na.rm= TRUE))
+raw_site <- which(site$`Site ID` %in% unique(pm04$`Site ID`))
+site <- site[raw_site, ]
+
+site
+dim(site)
+```
+
+Site-wide analysis_plot
+Now make a plot that shows the 2004 site-wide medians in one “column”  and the 2019 site-wide medians in another one. We then draw a line connecting the medians for each year in the same site to highlight the trend.
+
+```{r fig.height=7, fig.width= 11}
+qplot(Year, pm25, data = mutate(site, Year = as.numeric(as.character(year))),
+       color = factor(`Site ID`), 
+       geom = c("point", "line"), main = "Change in median concentration PM2.5 from 2004 to 2019 by County")
+```
+
+Based on the plot above, we could observe that many sites have decreased the median concentration of PM2.5 from 2004 to 2019, although there are still a few sites actually increased their levels.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
