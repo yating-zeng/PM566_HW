@@ -276,11 +276,9 @@ qplot(Year, pm25, data = mutate(site, Year = as.numeric(as.character(year))),
        geom = c("point", "line"), main = "Change in median concentration PM2.5 from 2004 to 2019 by County")
 ```
 
-Based on the plot above, we could observe that many sites have decreased the median concentration of PM2.5 from 2004 to 2019, although there are still a few sites actually increased their levels.
+Based on the plot above, we could observe that all the sites in LA have decreased the median concentration of PM2.5 from 2004 to 2019.
 
-```{r}
-PM[`COUNTY`== "Los Angeles"]
-```
+
 
 
 
