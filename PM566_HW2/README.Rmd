@@ -1,0 +1,334 @@
+---
+title: "PM566_HW2"
+author: "Yating Zeng"
+date: "`r Sys.Date()`"
+output: github_document
+always_allow_html: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Description
+
+For this assignment, data from USC’s Children’s Health Study would be analyzed.
+The learning objectives are to conduct data wrangling and visualize the data with key questions in mind.
+
+# Step 1. Data Wrangling
+
+The individual data includes personal and health characteristics of children in 12 communities across Southern California. The regional data include air quality measurements at the community level.
+
+```{r}
+library(tidyverse)
+library(dplyr)
+```
+
+## Read in the data
+
+```{r read-data, cache=TRUE}
+
+if (!file.exists("chs_individual.csv")){
+  download.file("https://raw.githubusercontent.com/USCbiostats/data-science-data/master/01_chs/chs_individual.csv", "chs_individual.csv", method="libcurl", timeout = 60)
+}
+if (!file.exists("chs_regional.csv")){
+  download.file("https://raw.githubusercontent.com/USCbiostats/data-science-data/master/01_chs/chs_regional.csv", "chs_regional.csv", method="libcurl", timeout = 60)
+}
+chs_ind <- read.csv("chs_individual.csv")
+chs_reg <- read.csv("chs_regional.csv")
+
+str(chs_ind)
+str(chs_reg)
+```
+
+We could find that there are 1200 objects of 23 variables in individual data and 12 objects of 27 variables in regional data. Thus, we'd better check the data before merging the data.
+
+```{r merge the datas}
+unique(chs_ind$townname) %>%
+  sort()
+unique(chs_reg$townname) %>%
+  sort()
+```
+
+The number of town name are the same in these two datasets, thus, we could use this variable to merge the data.
+
+## Merge the data
+```{r merge data}
+chs <- 
+  merge(
+  # Data
+  x     = chs_ind,      
+  y     = chs_reg, 
+  # List of variables to match
+  by.x  = "townname",
+  by.y  = "townname", 
+  # Which obs to keep?
+  all.x = TRUE,      
+  all.y = FALSE
+  )
+
+nrow(chs)
+```
+
+After merging the data, we find that there are 1200 rows, which means don’t have any duplicates by counting the number of rows. Make sure it matches.
+
+## check the missing values and impute the data
+
+```{r check the proportion missing values}
+#checking the proportion of missing values
+(colMeans(is.na(chs)))*100
+```
+
+There are still some missing value. In the case of missing values, we imputed data using the average within the variables “male” and “hispanic.”
+
+```{r impute data using the average within the variables “male” and “hispanic}
+#build up a subset for calculating each column's mean
+mean0 <- chs[which(chs$male==1 & chs$hispanic==1), ]
+#calculate the mean of the subset used to impute the data
+mean1 <- sapply(mean0, mean, na.rm = T) 
+chs0 <- chs # Duplicate data frame
+for(i in 1:ncol(chs)) {  # Replace NA in all columns
+  chs0[ , i][is.na(chs0[ , i])] <- mean1[i]
+}
+(colMeans(is.na(chs0)))*100
+head(chs0)
+```
+
+After checking all the variable, we could find the proportions of missing value for each column are all zero. But what needs to be noticed is that even though it was acceptable to replace the missing values with the "mean" of a subset for the numeric variable, but it was unreasonable for some categorical variable to do so, like "smoke" and "gas". Thus We'd better still analyze without these missing data for further questions, when we are about to analyze about the relationships between these categorical variable and others. But for now, the data was acceptable. 
+
+## Create a new categorical variable “obesity_level” 
+
+```{r create “obesity_level” by the BMI measurement}
+chs1 <- chs0 %>%
+  mutate(obesity_level = case_when(bmi <  14 ~ "underweight",
+                                   bmi <= 22 ~ "normal",
+                                   bmi <= 24 ~ "overweight",
+                                   bmi >  24 ~ "obese" ))
+head(chs1)
+#create a summary table that contains the minimum BMI, maximum BMI, and the total number of observations per category
+chs1 %>% group_by(obesity_level) %>%
+    summarise(
+      bmi_minimun   = min(bmi, na.rm=TRUE),
+      bmi_maximun   = max(bmi, na.rm=TRUE),
+      total_num     = n()
+    ) %>% arrange(obesity_level)
+```
+
+We could see that all the minimum and maximum are follow the criteria used to categorize, and the sum of the number of each subgroup is 1200, verify correct classification. 
+
+## Create  a new categorical variable “smoke_gas_exposure”
+
+Create another categorical variable named “smoke_gas_exposure” that summarizes “Second Hand Smoke” and “Gas Stove.” 
+
+```{r creat “smoke_gas_exposure”}
+chs2 <- chs1 %>%
+  mutate(smoke_gas_exposure 
+         = case_when(gasstove == 0&smoke == 0 ~ "unexposed to both gas and smoke",
+                     gasstove == 0&smoke == 1 ~ "exposed to only smoke",
+                     gasstove == 1&smoke == 0 ~ "exposed to only gas",
+                     gasstove == 1&smoke == 1 ~ "exposed to both gas and smoke" ))
+unique(chs2$smoke_gas_exposure)
+```
+
+There are 5 types of results in this variable, including "NA", "unexposed to both gas and smoke", "exposed to only gas", "exposed to only smoke" and "exposed to both gas and smoke". Thus the variable does just have four categories in total.
+
+## Create four summary tables
+
+Create four summary tables showing the average (or proportion, if binary) and sd of “Forced expiratory volume in 1 second (ml)” and asthma indicator by town, sex, obesity level, and “smoke_gas_exposure.”
+
+```{r Create four summary tables}
+#for (i in c("townname","male","obesity_level","smoke_gas_exposure" )){
+chs2 %>% group_by(townname) %>%
+    summarise(
+      fev_mean    = mean(fev, na.rm=TRUE),
+      asthma_yes  = 100*sum(asthma==1,na.rm=TRUE)/sum(asthma %in% c(1, 0),na.rm=TRUE),
+    ) %>% arrange(townname)
+
+chs2 %>% group_by(male) %>%
+    summarise(
+      fev_mean    = mean(fev, na.rm=TRUE),
+      asthma_yes  = 100*sum(asthma==1,na.rm=TRUE)/sum(asthma %in% c(1, 0),na.rm=TRUE),
+    ) %>% arrange(male)
+
+chs2 %>% group_by(obesity_level) %>%
+    summarise(
+      fev_mean    = mean(fev, na.rm=TRUE),
+      asthma_yes  = 100*sum(asthma==1,na.rm=TRUE)/sum(asthma %in% c(1, 0),na.rm=TRUE),
+    ) %>% arrange(obesity_level)
+
+chs2 %>% group_by(smoke_gas_exposure) %>%
+    summarise(
+      fev_mean    = mean(fev, na.rm=TRUE),
+      asthma_yes  = 100*sum(asthma==1,na.rm=TRUE)/sum(asthma %in% c(1, 0),na.rm=TRUE),
+    ) %>% arrange(smoke_gas_exposure)
+```
+
+# Exploratory Data Analysis
+
+## Formulate the questions
+
+The primary questions of interest are: 
+1. What is the association between BMI and FEV (forced expiratory volume)? 
+2. What is the association between smoke and gas exposure and FEV? 
+3. What is the association between PM2.5 exposure and FEV?
+
+## Check the dimensions and headers and footers of the data
+
+```{r check dimensions headers and footers}
+dim(chs2)
+str(chs2)
+head(chs2)
+tail(chs2)
+(colMeans(is.na(chs2)))*100
+```
+
+This data consists of 1200 objects of 51 variables, including BMI, obesity level, FEV, smoke and gas exposure and PM2.5, which are of our research interest. Towards these variables mentioned above, we have already replaced the missing value of the continuous variables (i.e bmi, fev and PM2.5), and there is only the new variable having missing value, which is "smoke and gas exposure", with proportion was 5%
+
+## Take a closer look on the 4 variables of interest.
+
+```{r take a closer look}
+
+chs2 %>% group_by(smoke_gas_exposure) %>%
+    summarise(
+      total_num     = n()
+    ) %>% arrange(smoke_gas_exposure)
+```
+
+
+## Facet plot showing scatterplots with regression lines of BMI vs FEV by “townname”
+
+```{r Facet plot, fig.height=5, fig.width= 5}
+library(ggplot2)
+#the objects with PM2.5<0
+ggplot(data = chs2, aes(x = bmi, y = fev)) + 
+  geom_point(mapping = aes(x = bmi, y = fev)) + 
+  facet_wrap(~ townname, nrow = 4) +
+  geom_smooth(stat = "smooth", method = "lm")
+```
+
+## Stacked histograms of FEV by BMI category and FEV by smoke/gas exposure. Use different color schemes than the ggplot default.
+
+```{r Stacked histograms}
+#Stacked histograms of FEV by BMI category
+
+library(ggplot2)
+ggplot(data = chs2, aes(x = fev, fill = obesity_level)) + 
+  geom_histogram(position = "stack") +
+  scale_fill_manual(name="Obesity level", 
+                    values = c("#8795E8", "#FF6AD5","gold","skyblue"))
+
+#Stacked histograms of FEV by smoke/gas exposure
+
+library(ggplot2)
+chs2 %>%
+  filter(!is.na(smoke_gas_exposure)) %>%
+ggplot(aes(x = fev,fill = smoke_gas_exposure,)) + 
+  geom_histogram(position = "stack") +
+  scale_fill_manual(name = "smoke or gas exposure", 
+                    values = c("#8795E8", "#FF6AD5","gold","skyblue"))
+```
+
+## Barchart of BMI by smoke/gas exposure.
+
+```{r Barchart of BMI by smoke/gas exposure.}
+# All raw bmi were used to create the barchart
+chs2 %>%
+  filter(!is.na(smoke_gas_exposure)) %>%
+  ggplot(aes(x=smoke_gas_exposure, y=bmi)) + 
+  geom_bar(stat = "identity") +
+  coord_flip()
+
+# Mean of bmi were used to create the barchart
+mean_bmi <- chs2 %>%
+  filter(!is.na(smoke_gas_exposure)) %>%
+  group_by(smoke_gas_exposure) %>%
+  mutate(mean_bmi = mean(bmi, na.rm = TRUE)) %>%
+  ungroup() %>%
+  select(smoke_gas_exposure, mean_bmi) %>%
+  distinct()
+
+chs2 %>%
+  filter(!is.na(smoke_gas_exposure)) %>%
+  ggplot(aes(x=smoke_gas_exposure, y=bmi)) + 
+  geom_bar(data=mean_bmi, 
+           aes(x=smoke_gas_exposure,y=mean_bmi),
+           stat = "identity") +
+  coord_flip()
+```
+
+
+
+## Statistical summary graphs of FEV by BMI and FEV by smoke/gas exposure category
+
+```{r Statistical summary graphs}
+#summary graphs of FEV by BMI
+ggplot(data = chs2) + 
+  geom_point(mapping = aes(x = bmi, y = fev)) +
+  geom_smooth(mapping = aes(x = pm2_5_fr, y = fev),stat = "smooth", method = "lm")
+
+#summary graphs of FEV by smoke/gas exposure
+chs2 %>%
+  filter(!is.na(smoke_gas_exposure)) %>%
+ggplot(aes(x = fev,fill = smoke_gas_exposure,)) + 
+  geom_histogram() +
+  facet_wrap(~ smoke_gas_exposure, nrow = 4) +
+  scale_fill_manual(name = "smoke or gas exposure", 
+                    values = c("#8795E8", "#FF6AD5","gold","skyblue"))
+
+chs2 %>%
+  filter(!is.na(smoke_gas_exposure)) %>%
+  ggplot() + 
+  geom_point(mapping = aes(x = smoke_gas_exposure, y = fev)) +
+  coord_flip()
+
+chs2 %>%
+  filter(!is.na(smoke_gas_exposure)) %>%
+ggplot(aes(x=smoke_gas_exposure, y=fev, fill = smoke_gas_exposure)) +
+    geom_boxplot()
+```
+
+
+## A leaflet map showing the concentrations of PM2.5 mass in each of the CHS communities (12 communities)
+
+```{r check townname and Pm2.5}
+#create a table of townname and Pm2.5
+table(chs2$townname,chs2$pm2_5_fr)
+#check the origin data without being imputed if there are 3 communities missing the value of PM2.5
+table(chs$townname,chs$pm2_5_fr)
+```
+
+```{r create the leaflet map}
+library(leaflet)
+library(leaflegend)
+
+leaflet(chs2) %>% 
+  addTiles() %>%
+  addCircles(lng = ~lon, lat = ~lat, weight = 1,
+    radius = ~pm2_5_fr * 500, opacity=0.01, stroke = T, fillOpacity = 0.01, popup = ~townname
+  )
+```
+
+After checking the data of the concentration of PM2.5,
+
+##  Examine whether PM2.5 mass is associated with FEV
+
+```{r}
+ggplot(data = chs2) + 
+  geom_point(mapping = aes(x = pm2_5_fr, y = fev)) +
+  geom_smooth(mapping = aes(x = pm2_5_fr, y = fev),stat = "smooth", method = "lm")
+
+```    
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
