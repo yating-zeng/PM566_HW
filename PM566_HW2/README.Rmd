@@ -49,7 +49,7 @@ unique(chs_reg$townname) %>%
   sort()
 ```
 
-The number of town name are the same in these two datasets, thus, we could use this variable to merge the data.
+The number of towns' name are the same in these two datasets, thus, we could use this variable to merge the data.
 
 ## Merge the data
 ```{r merge data}
@@ -78,9 +78,9 @@ After merging the data, we find that there are 1200 rows, which means don’t ha
 (colMeans(is.na(chs)))*100
 ```
 
-There are still some missing value. In the case of missing values, we imputed data using the average within the variables “male” and “hispanic.”
+There are still some missing values. In the case of missing values, we imputed data using the average within the variables “male” and “hispanic.”
 
-```{r impute data using the average within the variables “male” and “hispanic}
+```{r impute data}
 #build up a subset for calculating each column's mean
 mean0 <- chs[which(chs$male==1 & chs$hispanic==1), ]
 #calculate the mean of the subset used to impute the data
@@ -89,11 +89,12 @@ chs0 <- chs # Duplicate data frame
 for(i in 1:ncol(chs)) {  # Replace NA in all columns
   chs0[ , i][is.na(chs0[ , i])] <- mean1[i]
 }
+#check the data after imputing
 (colMeans(is.na(chs0)))*100
 head(chs0)
 ```
 
-After checking all the variable, we could find the proportions of missing value for each column are all zero. But what needs to be noticed is that even though it was acceptable to replace the missing values with the "mean" of a subset for the numeric variable, but it was unreasonable for some categorical variable to do so, like "smoke" and "gas". Thus We'd better still analyze without these missing data for further questions, when we are about to analyze about the relationships between these categorical variable and others. But for now, the data was acceptable. 
+After checking all the variable, we could find the proportions of missing value for each column are all zero. But what needs to be noticed is that even though it was acceptable to replace the missing values with the "mean" of a subset for the numeric variable, but it was unreasonable for some categorical variable to do so, like "smoke" and "gas". Thus We'd better still analyze without these missing data for further questions, when we are about to analyze about the relationships between these categorical variables and others. But for now, the data was acceptable. 
 
 ## Create a new categorical variable “obesity_level” 
 
@@ -104,7 +105,11 @@ chs1 <- chs0 %>%
                                    bmi <= 24 ~ "overweight",
                                    bmi >  24 ~ "obese" ))
 head(chs1)
-#create a summary table that contains the minimum BMI, maximum BMI, and the total number of observations per category
+```
+
+## create a summary table that contains the minimum BMI, maximum BMI, and the total number of observations per category
+
+```{r a summary table about BMI}
 chs1 %>% group_by(obesity_level) %>%
     summarise(
       bmi_minimun   = min(bmi, na.rm=TRUE),
@@ -113,7 +118,7 @@ chs1 %>% group_by(obesity_level) %>%
     ) %>% arrange(obesity_level)
 ```
 
-We could see that all the minimum and maximum are follow the criteria used to categorize, and the sum of the number of each subgroup is 1200, verify correct classification. 
+We could see that all the minimum and maximum are follow the criteria used to categorize, and the sum of the number of each subgroups is still 1200, verifing correct classification. 
 
 ## Create  a new categorical variable “smoke_gas_exposure”
 
@@ -122,10 +127,10 @@ Create another categorical variable named “smoke_gas_exposure” that summariz
 ```{r creat “smoke_gas_exposure”}
 chs2 <- chs1 %>%
   mutate(smoke_gas_exposure 
-         = case_when(gasstove == 0&smoke == 0 ~ "unexposed to both gas and smoke",
+         = case_when(gasstove == 1&smoke == 1 ~ "exposed to both gas and smoke",
                      gasstove == 0&smoke == 1 ~ "exposed to only smoke",
                      gasstove == 1&smoke == 0 ~ "exposed to only gas",
-                     gasstove == 1&smoke == 1 ~ "exposed to both gas and smoke" ))
+                     gasstove == 0&smoke == 0 ~ "unexposed to both gas and smoke" ))
 unique(chs2$smoke_gas_exposure)
 ```
 
@@ -135,32 +140,55 @@ There are 5 types of results in this variable, including "NA", "unexposed to bot
 
 Create four summary tables showing the average (or proportion, if binary) and sd of “Forced expiratory volume in 1 second (ml)” and asthma indicator by town, sex, obesity level, and “smoke_gas_exposure.”
 
-```{r Create four summary tables}
+```{r Create summary tables for fev and asthma by town}
 #for (i in c("townname","male","obesity_level","smoke_gas_exposure" )){
 chs2 %>% group_by(townname) %>%
     summarise(
+      N           = length(townname),
       fev_mean    = mean(fev, na.rm=TRUE),
+      fev_sd      = sd(fev, na.rm=TRUE),
       asthma_yes  = 100*sum(asthma==1,na.rm=TRUE)/sum(asthma %in% c(1, 0),na.rm=TRUE),
-    ) %>% arrange(townname)
+    ) %>% arrange(fev_mean)
+```
+Based on the results shown above, it's hard to find a relationship among town, fev and asthma.
 
+```{r Create summary tables for fev and asthma by sex}
 chs2 %>% group_by(male) %>%
     summarise(
+      N           = length(townname),
       fev_mean    = mean(fev, na.rm=TRUE),
+      fev_sd      = sd(fev, na.rm=TRUE),
       asthma_yes  = 100*sum(asthma==1,na.rm=TRUE)/sum(asthma %in% c(1, 0),na.rm=TRUE),
     ) %>% arrange(male)
+```
 
+Based on the results above, we could notice that mean fev and the proportion of asthma are both larger among males than females. But the relationship still need further study to verify.
+
+```{r Create summary tables for fev and asthma by obesity level}
 chs2 %>% group_by(obesity_level) %>%
     summarise(
+      N           = length(townname),
       fev_mean    = mean(fev, na.rm=TRUE),
+      fev_sd      = sd(fev, na.rm=TRUE),
       asthma_yes  = 100*sum(asthma==1,na.rm=TRUE)/sum(asthma %in% c(1, 0),na.rm=TRUE),
-    ) %>% arrange(obesity_level)
-
-chs2 %>% group_by(smoke_gas_exposure) %>%
-    summarise(
-      fev_mean    = mean(fev, na.rm=TRUE),
-      asthma_yes  = 100*sum(asthma==1,na.rm=TRUE)/sum(asthma %in% c(1, 0),na.rm=TRUE),
-    ) %>% arrange(smoke_gas_exposure)
+    ) %>% arrange(fev_mean)
 ```
+
+Based on the results above, we could notice that mean fev and the proportion of asthma both become larger with the obesity level increasing. But the relationship still need further study to verify.
+
+```{r Create summary tables for fev and asthma by smoke and gas level}
+chs2[which(!is.na(chs2$smoke_gas_exposure)), ] %>%
+    group_by(smoke_gas_exposure) %>%
+    summarise(
+      N           = length(townname),
+      fev_mean    = mean(fev, na.rm=TRUE),
+      fev_sd      = sd(fev, na.rm=TRUE),
+      asthma_yes  = 100*sum(asthma==1,na.rm=TRUE)/sum(asthma %in% c(1, 0),na.rm=TRUE),
+    ) %>% arrange(fev_mean)
+```
+
+Based on the results above, we could notice that mean fev and the proportion of asthma both are the minimum in the group with exposed to both gas and smoke, and the maximum in the group exposed to only smoke. But the relationship still need further study to verify.
+
 
 # Exploratory Data Analysis
 
@@ -181,29 +209,19 @@ tail(chs2)
 (colMeans(is.na(chs2)))*100
 ```
 
-This data consists of 1200 objects of 51 variables, including BMI, obesity level, FEV, smoke and gas exposure and PM2.5, which are of our research interest. Towards these variables mentioned above, we have already replaced the missing value of the continuous variables (i.e bmi, fev and PM2.5), and there is only the new variable having missing value, which is "smoke and gas exposure", with proportion was 5%
-
-## Take a closer look on the 4 variables of interest.
-
-```{r take a closer look}
-
-chs2 %>% group_by(smoke_gas_exposure) %>%
-    summarise(
-      total_num     = n()
-    ) %>% arrange(smoke_gas_exposure)
-```
-
+This data consists of 1200 objects of 51 variables, including BMI, obesity level, FEV, smoke and gas exposure and PM2.5, which are of our research interest. Towards these variables mentioned above, we have already replaced the missing value of the continuous variables (i.e bmi, fev and PM2.5), and there is only the new variable having missing value, which is "smoke and gas exposure", with proportion was 5%, and we would not use this passing value for the study bellow.
 
 ## Facet plot showing scatterplots with regression lines of BMI vs FEV by “townname”
 
 ```{r Facet plot, fig.height=5, fig.width= 5}
 library(ggplot2)
-#the objects with PM2.5<0
 ggplot(data = chs2, aes(x = bmi, y = fev)) + 
   geom_point(mapping = aes(x = bmi, y = fev)) + 
   facet_wrap(~ townname, nrow = 4) +
   geom_smooth(stat = "smooth", method = "lm")
 ```
+
+These plots show a relationship between BMI and Fev, to be more specific, the fev seems to be larger with the increase of BMI.
 
 ## Stacked histograms of FEV by BMI category and FEV by smoke/gas exposure. Use different color schemes than the ggplot default.
 
@@ -227,16 +245,22 @@ ggplot(aes(x = fev,fill = smoke_gas_exposure,)) +
                     values = c("#8795E8", "#FF6AD5","gold","skyblue"))
 ```
 
+After observing the histograms above, we could find a difference of the distribution among the groups of obesity level and smoke and gas level. Among the groups of different obesity level, their distributions all look normal, but with different means, which is smaller with the obesity level decreasing. Among the groups of different smoke and gas level, it's hard to diagnose a difference among the distribution, especially their means of Fev.
+
 ## Barchart of BMI by smoke/gas exposure.
 
-```{r Barchart of BMI by smoke/gas exposure.}
+```{r Barchart of all raw BMI by smoke/gas exposure.}
 # All raw bmi were used to create the barchart
 chs2 %>%
   filter(!is.na(smoke_gas_exposure)) %>%
   ggplot(aes(x=smoke_gas_exposure, y=bmi)) + 
   geom_bar(stat = "identity") +
   coord_flip()
+```
 
+It would be hard to find the possible relationship between bmi and smoke and gas exposure, because the number of each group would affect the sum of BMI, so we would calculate the mean of bmi to represent for the bmi level of each groups of smoke and gas exposure.
+
+```{r Barchart of mean BMI by smoke/gas exposure.}
 # Mean of bmi were used to create the barchart
 mean_bmi <- chs2 %>%
   filter(!is.na(smoke_gas_exposure)) %>%
@@ -255,17 +279,62 @@ chs2 %>%
   coord_flip()
 ```
 
-
+There is little difference among the means of all smoke and gas groups by checking the barchart.
 
 ## Statistical summary graphs of FEV by BMI and FEV by smoke/gas exposure category
 
-```{r Statistical summary graphs}
+```{r Statistical summary graphs of FEV by BMI}
 #summary graphs of FEV by BMI
 ggplot(data = chs2) + 
   geom_point(mapping = aes(x = bmi, y = fev)) +
   geom_smooth(mapping = aes(x = pm2_5_fr, y = fev),stat = "smooth", method = "lm")
+```
 
+```{r , fig.height=5, fig.width= 5}
+ggplot(data = chs2, aes(x = bmi, y = fev)) + 
+  geom_point(mapping = aes(x = bmi, y = fev)) + 
+  facet_wrap(~ townname, nrow = 4) +
+  geom_smooth(stat = "smooth", method = "lm")
+```
+
+Then treat BMI as categorical variable for further summary graphs, that is using obesity level variable.
+
+```{r summary plots using obesity level variable}
+#make the obesity_level variable to be categorical 
+chs2$obesity_level <- factor(chs2$obesity_level , levels=c("underweight", "normal", "overweight", "obese"))
+```
+
+```{r histofram, fig.height=4, fig.width= 5 }
+#histogram
+chs2 %>%
+ggplot(aes(x = fev,fill = obesity_level,)) + 
+  geom_histogram() +
+  facet_wrap(~ obesity_level, nrow = 2) +
+  scale_fill_manual(name = "obesity level", 
+                    values = c("#8795E8", "#FF6AD5","gold","skyblue"))
+```
+
+```{r scatter plots using obesity level variable}
+#scatter plot
+chs2 %>%
+  filter(!is.na(obesity_level)) %>%
+  ggplot(aes(x=reorder(obesity_level,fev,na.rm = TRUE), y=fev)) + 
+  geom_point(mapping = aes(x = obesity_level, y = fev))
+```
+
+```{r boxplot}
+#Boxplot
+chs2 %>%
+  filter(!is.na(obesity_level)) %>%
+ggplot(aes(x=reorder(obesity_level, fev, na.rm =TRUE), y=fev, fill = obesity_level)) +
+    geom_boxplot()
+```
+
+The relationship observed between bmi and fev is the same as we talked before, the fev would increase with the level of obesity be higher. 
+
+```{r Statistical summary graphs of FEV by smoke/gas exposure}
 #summary graphs of FEV by smoke/gas exposure
+#histogram
 chs2 %>%
   filter(!is.na(smoke_gas_exposure)) %>%
 ggplot(aes(x = fev,fill = smoke_gas_exposure,)) + 
@@ -274,18 +343,21 @@ ggplot(aes(x = fev,fill = smoke_gas_exposure,)) +
   scale_fill_manual(name = "smoke or gas exposure", 
                     values = c("#8795E8", "#FF6AD5","gold","skyblue"))
 
+#scatter plot
 chs2 %>%
   filter(!is.na(smoke_gas_exposure)) %>%
   ggplot() + 
   geom_point(mapping = aes(x = smoke_gas_exposure, y = fev)) +
   coord_flip()
 
+#Boxplot
 chs2 %>%
   filter(!is.na(smoke_gas_exposure)) %>%
 ggplot(aes(x=smoke_gas_exposure, y=fev, fill = smoke_gas_exposure)) +
     geom_boxplot()
 ```
 
+The relationship observed is the same as before, we could notice that mean fev and the proportion of asthma both are the minimum in the group with exposed to both gas and smoke, and the maximum in the group exposed to only smoke. But the relationship still need further study to verify.
 
 ## A leaflet map showing the concentrations of PM2.5 mass in each of the CHS communities (12 communities)
 
@@ -307,17 +379,17 @@ leaflet(chs2) %>%
   )
 ```
 
-After checking the data of the concentration of PM2.5,
+After checking the data of the concentration of PM2.5, we make sure that there is no missing value and only one value for each town. The area of the circle mark in the leaflet map represents the magnitude of the value of the concentration of PM2.5. And we could notice that the concentration of PM2.5 is more likely to be higher in the large cities, which makes sence.
 
 ##  Examine whether PM2.5 mass is associated with FEV
 
-```{r}
+```{r scatter plot}
 ggplot(data = chs2) + 
   geom_point(mapping = aes(x = pm2_5_fr, y = fev)) +
   geom_smooth(mapping = aes(x = pm2_5_fr, y = fev),stat = "smooth", method = "lm")
-
 ```    
 
+Based on the scatter plot above, we could observe a slightly negative relationship between the concentration of PM2.5 and fev.
 
 
 
