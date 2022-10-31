@@ -31,6 +31,7 @@ library(rvest)
 library(httr)
 library(tidyverse)
 library(stringr)
+library(kableExtra)
 ```
 
 ```{r, cache=TRUE}
@@ -68,7 +69,7 @@ publications <- GET(
   query = list(
     db = "pubmed",
     id = I(paste(ids, collapse=",")),
-    retmax = 1000,
+    retmax = 250,
     rettype = "abstract"
     )
 )
@@ -84,22 +85,42 @@ pub_char_list <- sapply(pub_char_list, as.character)
 
 ```{r Geitting the abstracts, cache=TRUE}
 abstracts <- str_extract(pub_char_list, "<Abstract>[[:print:][:space:]]+</Abstract>")
-abstracts <- str_remove_all(abstracts, "</?[[:alnum:]- =\"]+>") # '</?[[:alnum:]- ="]+>'
+abstracts <- str_remove_all(abstracts, "</?[[:alnum:]- =\"]+>")
 abstracts <- str_replace_all(abstracts, "[[:space:]]+", " ")
 ```
 
-```{r, cache=TRUE}
+```{r Geitting the titles, cache=TRUE}
 titles <- str_extract(pub_char_list, "<ArticleTitle>[[:print:][:space:]]+</ArticleTitle>")
 titles <- str_remove_all(titles, "</?[[:alnum:]- =\"]+>")
 ```
 
-```{r, cache=TRUE}
+```{r Getting the journal names, cache=TRUE}
+journal <- str_extract(pub_char_list, "<Title>[[:print:][:space:]]+</Title>")
+journal <- str_remove_all(journal, "</?[[:alnum:]- =\"]+>")
+journal <- str_remove_all(journal, "[\n]")
+```
+
+```{r Getting the publicatioin date, cache=TRUE}
+pubdate <- str_extract(pub_char_list, "<PubDate>[[:print:][:space:]]+</PubDate>")
+pubdate <- str_remove_all(pubdate, "</?[[:alnum:]- =\"]+>")
+pubdate <- str_remove_all(pubdate, "[\n]")
+pubdate <- str_remove_all(pubdate, "[:space:]")
+```
+
+```{r summary table, cache=TRUE}
 database <- data.frame(
   PubMedId = ids,
+  Journal  = journal,
+  PubDate  = pubdate,
   Title    = titles,
   Abstract = abstracts
 )
-knitr::kable(database[1:20,], caption = "Some papers about sars-cov-2 trial vaccine")
+summary <- knitr::kable(database[1:5,], align = "lccll",caption = "Some papers about sars-cov-2 trial vaccine") %>%
+  column_spec(2, width = "10em") %>%
+  column_spec(3, width = "8em") %>%
+  column_spec(4, width = "20em") %>%
+  kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)
+summary
 ```
 
 
@@ -162,7 +183,7 @@ Considering "covid" and "19" are usually used together, we could also remove the
 
 ## 2) Tokenize the abstracts into bigrams. Find the 10 most common bigram and visualize them with ggplot2.
 
-```{r, cache=TRUE, fig.height = 2, fig.width = 4}
+```{r, cache=TRUE}
 pub %>%
   unnest_ngrams(bigram, abstract, n=2) %>%
   count(bigram, sort = TRUE) %>%
