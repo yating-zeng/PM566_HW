@@ -1,8 +1,8 @@
 ---
 title: "HW03"
 author: "Yating Zeng"
-date: "r Sys.Date()`"
-output: github_document
+date: "`r Sys.Date()`"
+output: html_document
 always_allow_html: true
 ---
 
@@ -50,7 +50,7 @@ ids
 
 The Ids are wrapped around text in the following way: <Id>... id number ...</Id>. we can use a regular expression that extract that information.
 
-```{r}
+```{r, cache=TRUE}
 # Turn the result into a character vector
 ids <- as.character(ids)
 # Find all the ids 
