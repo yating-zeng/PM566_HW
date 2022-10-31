@@ -131,7 +131,7 @@ database <- data.frame(
 summary <- knitr::kable(database[1:5,], align = "lccll",caption = "Some papers about sars-cov-2 trial vaccine") %>%
   column_spec(2, width = "10em") %>%
   column_spec(3, width = "7em") %>%
-  column_spec(4, width = "30em") %>%
+  column_spec(4, width = "40em") %>%
   kable_styling(bootstrap_options = c("striped", "hover"))
 summary
 ```
@@ -170,7 +170,7 @@ Trials
 <td style="text-align:center;width: 7em; ">
 2022Oct28
 </td>
-<td style="text-align:left;width: 30em; ">
+<td style="text-align:left;width: 40em; ">
 Improving pediatric COVID-19 vaccine uptake using an mHealth tool
 (MoVeUp): study protocol for a randomized, controlled trial.
 </td>
@@ -226,7 +226,7 @@ Journal of biomolecular structure &amp; dynamics
 <td style="text-align:center;width: 7em; ">
 2022Oct28
 </td>
-<td style="text-align:left;width: 30em; ">
+<td style="text-align:left;width: 40em; ">
 Deep learning in drug discovery: a futuristic modality to materialize
 the large datasets for cheminformatics.
 </td>
@@ -267,7 +267,7 @@ PLoS medicine
 <td style="text-align:center;width: 7em; ">
 2022Oct
 </td>
-<td style="text-align:left;width: 30em; ">
+<td style="text-align:left;width: 40em; ">
 Immunogenicity and reactogenicity of SARS-CoV-2 vaccines in people
 living with HIV in the Netherlands: A nationwide prospective cohort
 study.
@@ -327,7 +327,7 @@ medRxiv : the preprint server for health sciences
 <td style="text-align:center;width: 7em; ">
 2022Oct18
 </td>
-<td style="text-align:left;width: 30em; ">
+<td style="text-align:left;width: 40em; ">
 Fluvoxamine for Outpatient Treatment of COVID-19: A Decentralized,
 Placebo-controlled, Randomized, Platform Clinical Trial.
 </td>
@@ -373,7 +373,7 @@ Viruses
 <td style="text-align:center;width: 7em; ">
 2022Oct04
 </td>
-<td style="text-align:left;width: 30em; ">
+<td style="text-align:left;width: 40em; ">
 Immunogenicity, Safety, and Anti-Viral Efficacy of a Subunit SARS-CoV-2
 Vaccine Candidate in Captive Black-Footed Ferrets (Mustela nigripes) and
 Their Susceptibility to Viral Challenge.
