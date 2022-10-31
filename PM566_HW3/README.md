@@ -130,8 +130,8 @@ database <- data.frame(
 )
 summary <- knitr::kable(database[1:5,], align = "lccll",caption = "Some papers about sars-cov-2 trial vaccine") %>%
   column_spec(2, width = "10em") %>%
-  column_spec(3, width = "8em") %>%
-  column_spec(4, width = "20em") %>%
+  column_spec(3, width = "7em") %>%
+  column_spec(4, width = "25em") %>%
   kable_styling(bootstrap_options = c("striped", "hover"), full_width = F)
 summary
 ```
@@ -167,10 +167,10 @@ Abstract
 <td style="text-align:center;width: 10em; ">
 Trials
 </td>
-<td style="text-align:center;width: 8em; ">
+<td style="text-align:center;width: 7em; ">
 2022Oct28
 </td>
-<td style="text-align:left;width: 20em; ">
+<td style="text-align:left;width: 25em; ">
 Improving pediatric COVID-19 vaccine uptake using an mHealth tool
 (MoVeUp): study protocol for a randomized, controlled trial.
 </td>
@@ -223,10 +223,10 @@ on May 23, 2022. © 2022. The Author(s).
 <td style="text-align:center;width: 10em; ">
 Journal of biomolecular structure &amp; dynamics
 </td>
-<td style="text-align:center;width: 8em; ">
+<td style="text-align:center;width: 7em; ">
 2022Oct28
 </td>
-<td style="text-align:left;width: 20em; ">
+<td style="text-align:left;width: 25em; ">
 Deep learning in drug discovery: a futuristic modality to materialize
 the large datasets for cheminformatics.
 </td>
@@ -264,10 +264,10 @@ H. Sarma.
 <td style="text-align:center;width: 10em; ">
 PLoS medicine
 </td>
-<td style="text-align:center;width: 8em; ">
+<td style="text-align:center;width: 7em; ">
 2022Oct
 </td>
-<td style="text-align:left;width: 20em; ">
+<td style="text-align:left;width: 25em; ">
 Immunogenicity and reactogenicity of SARS-CoV-2 vaccines in people
 living with HIV in the Netherlands: A nationwide prospective cohort
 study.
@@ -324,10 +324,10 @@ registered in the Netherlands Trial Register (NL9214).
 <td style="text-align:center;width: 10em; ">
 medRxiv : the preprint server for health sciences
 </td>
-<td style="text-align:center;width: 8em; ">
+<td style="text-align:center;width: 7em; ">
 2022Oct18
 </td>
-<td style="text-align:left;width: 20em; ">
+<td style="text-align:left;width: 25em; ">
 Fluvoxamine for Outpatient Treatment of COVID-19: A Decentralized,
 Placebo-controlled, Randomized, Platform Clinical Trial.
 </td>
@@ -370,10 +370,10 @@ dose and duration in patients with mild to moderate COVID-19.
 <td style="text-align:center;width: 10em; ">
 Viruses
 </td>
-<td style="text-align:center;width: 8em; ">
+<td style="text-align:center;width: 7em; ">
 2022Oct04
 </td>
-<td style="text-align:left;width: 20em; ">
+<td style="text-align:left;width: 25em; ">
 Immunogenicity, Safety, and Anti-Viral Efficacy of a Subunit SARS-CoV-2
 Vaccine Candidate in Captive Black-Footed Ferrets (Mustela nigripes) and
 Their Susceptibility to Viral Challenge.
