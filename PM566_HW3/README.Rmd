@@ -1,0 +1,209 @@
+---
+title: "HW03"
+author: "Yating Zeng"
+date: "r Sys.Date()`"
+output: github_document
+always_allow_html: true
+---
+
+# 1.APIs
+
+## 1) Using the NCBI API, look for papers that show up under the term “sars-cov-2 trial vaccine.” Look for the data in the pubmed database, and then retrieve the details of the paper as shown in lab 7. How many papers were you able to find?
+
+```{r, cache=TRUE}
+# Downloading the website
+website <- xml2::read_html("https://pubmed.ncbi.nlm.nih.gov/?term=sars-cov-2+trial+vaccine")
+# Finding the counts
+counts <- xml2::xml_find_first(website, "/html/body/main/div[9]/div[2]/div[2]/div[1]/div[1]")
+# Turning it into text
+counts <- as.character(counts)
+# Extracting the data using regex
+stringr::str_extract(counts, "[0-9,]+")
+stringr::str_extract(counts, "[[:digit:],]+")
+stringr::str_replace(counts, "[^[:digit:]]+([[:digit:]]+),([[:digit:]]+)[^[:digit:]]+", "\\1\\2")
+```
+
+## 2) Using the list of pubmed ids you retrieved, download each papers’ details using the query parameter rettype = abstract. If you get more than 250 ids, just keep the first 250.
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(rvest)
+library(httr)
+library(tidyverse)
+library(stringr)
+```
+
+```{r, cache=TRUE}
+query_ids <- GET(
+  url   = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+  query = list(
+    db      = "pubmed",
+    term    = "sars-cov-2 trial vaccine",
+    retmax  = 250
+  ), 
+)
+# Extracting the content of the response of GET
+ids <- httr::content(query_ids)
+ids
+```
+
+The Ids are wrapped around text in the following way: <Id>... id number ...</Id>. we can use a regular expression that extract that information.
+
+```{r, cache=TRUE}
+# Turn the result into a character vector
+ids <- as.character(ids)
+# Find all the ids 
+ids <- stringr::str_extract_all(ids, "<Id>[[:digit:]]+</Id>")[[1]]
+# Remove all the leading and trailing <Id> </Id>. Make use of "|"
+ids <- stringr::str_remove_all(ids, "</?Id>")
+head(ids)
+```
+
+## 3) As we did in lab 7. Create a dataset containing the following: Pubmed ID number, Title of the paper, Name of the journal where it was published, Publication date, and Abstract of the paper (if any).
+
+```{r retrieving-papers, cache=TRUE}
+publications <- GET(
+  url   = "https://eutils.ncbi.nlm.nih.gov/",
+  path  = "entrez/eutils/efetch.fcgi",
+  query = list(
+    db = "pubmed",
+    id = I(paste(ids, collapse=",")),
+    retmax = 1000,
+    rettype = "abstract"
+    )
+)
+# Turning the output into character vector
+publications <- httr::content(publications)
+publications_txt <- as.character(publications)
+```
+
+```{r, cache=TRUE}
+pub_char_list <- xml2::xml_children(publications)
+pub_char_list <- sapply(pub_char_list, as.character)
+```
+
+```{r Geitting the abstracts, cache=TRUE}
+abstracts <- str_extract(pub_char_list, "<Abstract>[[:print:][:space:]]+</Abstract>")
+abstracts <- str_remove_all(abstracts, "</?[[:alnum:]- =\"]+>") # '</?[[:alnum:]- ="]+>'
+abstracts <- str_replace_all(abstracts, "[[:space:]]+", " ")
+```
+
+```{r, cache=TRUE}
+titles <- str_extract(pub_char_list, "<ArticleTitle>[[:print:][:space:]]+</ArticleTitle>")
+titles <- str_remove_all(titles, "</?[[:alnum:]- =\"]+>")
+```
+
+```{r, cache=TRUE}
+database <- data.frame(
+  PubMedId = ids,
+  Title    = titles,
+  Abstract = abstracts
+)
+knitr::kable(database[1:20,], caption = "Some papers about sars-cov-2 trial vaccine")
+```
+
+
+# 2. Text mining
+
+A new dataset has been added to the data science data repository https://github.com/USCbiostats/data-science- data/tree/master/03_pubmed. The dataset contains 3241 abstracts from articles across 5 search terms. Your job is to analyse these abstracts to find interesting insights.
+
+```{r install-libraries, cache=TRUE}
+library(tidytext)
+library(ggplot2)
+
+library(tidyverse)
+library(dtplyr)
+library(forcats)
+```
+
+### Read in the data
+First download and then read in with read.csv()
+
+```{r read-data, cache=TRUE}
+if (!file.exists("pubmed.csv")){
+  download.file("https://raw.githubusercontent.com/USCbiostats/data-science-data/master/03_pubmed/pubmed.csv", "pubmed.csv", method="libcurl", timeout = 60)
+}
+
+pub <- read.csv("pubmed.csv")
+str(pub)
+pub <- as_tibble(pub)
+pub
+```
+
+## 1) Tokenize the abstracts and count the number of each token. Do you see anything interesting? Does removing stop words change what tokens appear as the most frequent? What are the 5 most common tokens for each search term after removing stopwords?
+
+```{r tokenizing, cache=TRUE}
+pub %>%
+  unnest_tokens(token, abstract) %>%
+  count(token, sort = TRUE) %>%
+  top_n(20, n) %>%
+  ggplot(aes(n, fct_reorder(token, n))) +
+  labs(x = "Number", y = "Top 20 tokens with stop words") +
+  geom_col()
+```
+
+We could find that most the word with high frequency are the stop words. 15 of the top 20 common tokens, especially the top 5, are all stop words. The other 5 tokens with frequency increased by the order are "covid", "19", "patients", "cancer", and "prostate". Considering "covid" and "19" are usually used together, this results make sense.
+
+```{r, cache=TRUE, cache=TRUE}
+pub %>%
+  unnest_tokens(token, abstract) %>%
+  anti_join(stop_words, by = c("token" = "word")) %>%
+  count(token, sort = TRUE) %>%
+  #use regular 
+  filter(!grepl(pattern = "^[0-9]+$", x = token)) %>%
+  top_n(5, n) %>%
+  ggplot(aes(n, fct_reorder(token, n))) +
+  labs(x = "Number", y = "Top 5 tokens without stop words") +
+  geom_col()
+```
+
+Considering "covid" and "19" are usually used together, we could also remove the number when we remove the stop words to observe the common words better. After removing process, the result the top 5 tokens with high frequency are all non stop-word, which are the same one mentioned above,"covid", "patients", "cancer", "prostate" and a new one "disease".
+
+
+## 2) Tokenize the abstracts into bigrams. Find the 10 most common bigram and visualize them with ggplot2.
+
+```{r, cache=TRUE, fig.height = 2, fig.width = 4}
+pub %>%
+  unnest_ngrams(bigram, abstract, n=2) %>%
+  count(bigram, sort = TRUE) %>%
+  top_n(10, n) %>%
+  ggplot(aes(n, fct_reorder(bigram, n))) +
+  labs(x = "Number", y = "Top 10 bi-gram tokens")  +
+  geom_col()
+```
+
+The 10 most common bi-gram are shown above, "covid 19" are much more than the others. And nearly all the most 10 common bi-gram are the combination of the 20 most common tokens we gained before without removing the stop words and the number.
+
+## 3) Calculate the TF-IDF value for each word-search term combination. (here you want the search term to be the “document”) What are the 5 tokens from each search term with the highest TF-IDF value? How are the results different from the answers you got in question 1?
+
+```{r TF-IDF for each token, cache=TRUE}
+#tokens with stop words and number
+pub %>%
+  unnest_tokens(token, abstract) %>%
+  count(token, term) %>%
+  bind_tf_idf(token, term, n) %>%
+  arrange(desc(tf_idf)) %>%
+  top_n(5, tf_idf)
+
+#token without stop words and number
+pub %>%
+  unnest_tokens(token, abstract) %>%
+  anti_join(stop_words, by = c("token" = "word")) %>%
+  filter(!grepl(pattern = "^[0-9]+$", x = token)) %>%
+  count(token, term) %>%
+  bind_tf_idf(token, term, n) %>%
+  arrange(desc(tf_idf)) %>%
+  top_n(5, tf_idf)
+
+#bi-grams with stop words and number
+pub %>%
+  unnest_ngrams(bigram, abstract, n=2) %>%
+  count(bigram, term) %>%
+  bind_tf_idf(bigram, term, n) %>%
+  arrange(desc(tf_idf)) %>%
+  top_n(5, tf_idf)
+```
+
+Not matter removing the stop words and the number ore not, the 5 tokens with highest tf_idf value of both are the same, which are "covid", "prostate", "eclampsia", "preeclampsia", and "meningitis". For the bi-grams, the 5 tokens with highest tf_idf value are "covid 19","prostate cancer","pre eclampsia","cystic fibrosis", and "of covid". 
+Comparing with the 5 common tokens in question 1, "covid", "patients", "cancer", "prostate" and "disease", the 5 tokens with highest tf_idf value here are prtly different, with only "covid" and "prostate" are the same. Besides, the 5 tokens with highest tf_idf value ("eclampsia", "preeclampsia", and "meningitis") provide more specific and useful information on learning about the research results than the 5 common tokens with highest frequency ("patients", "cancer", and "disease".
+
