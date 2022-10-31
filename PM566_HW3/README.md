@@ -18,19 +18,19 @@ counts <- as.character(counts)
 stringr::str_extract(counts, "[0-9,]+")
 ```
 
-    ## [1] "3,993"
+    ## [1] "3,995"
 
 ``` r
 stringr::str_extract(counts, "[[:digit:],]+")
 ```
 
-    ## [1] "3,993"
+    ## [1] "3,995"
 
 ``` r
 stringr::str_replace(counts, "[^[:digit:]]+([[:digit:]]+),([[:digit:]]+)[^[:digit:]]+", "\\1\\2")
 ```
 
-    ## [1] "3993"
+    ## [1] "3995"
 
 ## 2) Using the list of pubmed ids you retrieved, download each papers’ details using the query parameter rettype = abstract. If you get more than 250 ids, just keep the first 250.
 
@@ -414,10 +414,20 @@ to find interesting insights.
 
 ``` r
 library(tidytext)
+```
+
+    ## Warning: package 'tidytext' was built under R version 4.1.2
+
+``` r
 library(ggplot2)
 
 library(tidyverse)
 library(dtplyr)
+```
+
+    ## Warning: package 'dtplyr' was built under R version 4.1.2
+
+``` r
 library(forcats)
 ```
 
@@ -491,7 +501,7 @@ pub %>%
   geom_col()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-5-1.png)<!-- -->
+![](README_files/figure-gfm/Top%205%20tokens%20without%20stop%20words-1.png)<!-- -->
 
 Considering “covid” and “19” are usually used together, we could also
 remove the number when we remove the stop words to observe the common
@@ -511,7 +521,7 @@ pub %>%
   geom_col()
 ```
 
-![](README_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
+![](README_files/figure-gfm/Top%2010%20bi-gram%20tokens-1.png)<!-- -->
 
 The 10 most common bi-gram are shown above, “covid 19” are much more
 than the others. And nearly all the most 10 common bi-gram are the

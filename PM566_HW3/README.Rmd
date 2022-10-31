@@ -50,7 +50,7 @@ ids
 
 The Ids are wrapped around text in the following way: <Id>... id number ...</Id>. we can use a regular expression that extract that information.
 
-```{r, cache=TRUE}
+```{r}
 # Turn the result into a character vector
 ids <- as.character(ids)
 # Find all the ids 
@@ -107,7 +107,7 @@ pubdate <- str_remove_all(pubdate, "[\n]")
 pubdate <- str_remove_all(pubdate, "[:space:]")
 ```
 
-```{r summary table, cache=TRUE}
+```{r summary table}
 database <- data.frame(
   PubMedId = ids,
   Journal  = journal,
@@ -153,7 +153,7 @@ pub
 
 ## 1) Tokenize the abstracts and count the number of each token. Do you see anything interesting? Does removing stop words change what tokens appear as the most frequent? What are the 5 most common tokens for each search term after removing stopwords?
 
-```{r tokenizing, cache=TRUE}
+```{r tokenizing}
 pub %>%
   unnest_tokens(token, abstract) %>%
   count(token, sort = TRUE) %>%
@@ -165,7 +165,7 @@ pub %>%
 
 We could find that most the word with high frequency are the stop words. 15 of the top 20 common tokens, especially the top 5, are all stop words. The other 5 tokens with frequency increased by the order are "covid", "19", "patients", "cancer", and "prostate". Considering "covid" and "19" are usually used together, this results make sense.
 
-```{r, cache=TRUE, cache=TRUE}
+```{r Top 5 tokens without stop words}
 pub %>%
   unnest_tokens(token, abstract) %>%
   anti_join(stop_words, by = c("token" = "word")) %>%
@@ -183,7 +183,7 @@ Considering "covid" and "19" are usually used together, we could also remove the
 
 ## 2) Tokenize the abstracts into bigrams. Find the 10 most common bigram and visualize them with ggplot2.
 
-```{r, cache=TRUE}
+```{r Top 10 bi-gram tokens}
 pub %>%
   unnest_ngrams(bigram, abstract, n=2) %>%
   count(bigram, sort = TRUE) %>%
@@ -197,7 +197,7 @@ The 10 most common bi-gram are shown above, "covid 19" are much more than the ot
 
 ## 3) Calculate the TF-IDF value for each word-search term combination. (here you want the search term to be the “document”) What are the 5 tokens from each search term with the highest TF-IDF value? How are the results different from the answers you got in question 1?
 
-```{r TF-IDF for each token, cache=TRUE}
+```{r TF-IDF for each token}
 #tokens with stop words and number
 pub %>%
   unnest_tokens(token, abstract) %>%
