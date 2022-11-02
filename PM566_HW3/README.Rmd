@@ -2,7 +2,7 @@
 title: "HW03"
 author: "Yating Zeng"
 date: "`r Sys.Date()`"
-output: html_document
+output: github_document
 always_allow_html: true
 ---
 
